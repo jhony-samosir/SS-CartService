@@ -57,12 +57,14 @@ export class CartService {
   async addItem(userId: number, input: AddCartItemInput, actorEmail: string) {
     // 1. Validate Product Existence & Price from Catalog Service
     const product = await this.catalogClient.getProduct(input.productPublicId)
-    if (!product || product.status !== 'ACTIVE') {
+    if (!product || product.status.toUpperCase() !== 'ACTIVE') {
       return { validationError: 'Product is not available or inactive' }
     }
 
     // Override input price and name with authoritative data from Catalog
-    input.unitPrice = product.price
+    if (product.price > 0) {
+      input.unitPrice = product.price
+    }
     input.productName = product.name
 
     // 2. Validate Inventory

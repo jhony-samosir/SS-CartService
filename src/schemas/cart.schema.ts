@@ -2,14 +2,14 @@ import { z } from 'zod'
 
 // ─── Add Item ────────────────────────────────────────────────────────────────
 export const AddCartItemSchema = z.object({
-  productId: z.number().int().positive(),
+  productId: z.number().int().min(0),
   productPublicId: z.string().uuid(),
   variantId: z.number().int().positive().optional(),
   variantPublicId: z.string().uuid().optional(),
   productName: z.string().min(1).max(500),
   variantName: z.string().max(255).optional(),
   sku: z.string().max(255).optional(),
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.string().url().or(z.literal('')).optional(),
   unitPrice: z.number().nonnegative(),
   currencyCode: z.string().length(3).default('IDR'),
   quantity: z.number().int().min(1).default(1),

@@ -42,7 +42,15 @@ export default async function cartRoutes(app: FastifyInstance) {
       const userId = req.user.userId
       const actorEmail = req.user.email
       const result = await service.addItem(userId, parsed.data, actorEmail)
-      return reply.code(201).send({ data: result })
+
+      if (result.validationError) {
+        return reply.code(400).send({ error: result.validationError })
+      }
+      if (result.outOfStock) {
+        return reply.code(409).send({ error: 'Out of stock', availableStock: result.availableStock })
+      }
+
+      return reply.code(201).send({ data: result.item })
     }
   )
 

@@ -58,7 +58,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   })
 
   // ─── Routes ──────────────────────────────────────────────────────────────
-  await app.register(cartRoutes, { prefix: '/cart' })
+  await app.register(cartRoutes, { prefix: '/api/cart' })
 
   // ─── Workers ─────────────────────────────────────────────────────────────
   app.addHook('onReady', async () => {
