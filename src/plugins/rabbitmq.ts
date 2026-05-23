@@ -11,8 +11,8 @@ declare module 'fastify' {
 export default fp(async (app: FastifyInstance) => {
   const url = process.env.RABBITMQ_URL || 'amqp://guest:guest@host.docker.internal:5672/'
   
-  let conn: Connection
-  let ch: Channel
+  let conn: any
+  let ch: any
   const maxRetries = 5
 
   const connect = async () => {
@@ -32,7 +32,7 @@ export default fp(async (app: FastifyInstance) => {
         app.decorate('amqp', ch)
         app.log.info('RabbitMQ connected successfully')
 
-        conn.on('error', (err) => {
+        conn.on('error', (err: any) => {
           app.log.error(err, 'RabbitMQ connection error')
         })
 

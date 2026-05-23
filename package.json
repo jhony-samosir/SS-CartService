@@ -4,9 +4,9 @@
   "description": "Shopping Cart microservice for SamStore",
   "main": "dist/app.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --import ./src/tracing.ts src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node --require ./dist/tracing.js dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:introspect": "prisma db pull",
     "test": "vitest run",
@@ -27,6 +27,11 @@
   "dependencies": {
     "@fastify/jwt": "^9.0.0",
     "@fastify/sensible": "^6.0.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.76.0",
+    "@opentelemetry/exporter-trace-otlp-grpc": "^0.218.0",
+    "@opentelemetry/resources": "^2.7.1",
+    "@opentelemetry/sdk-node": "^0.218.0",
+    "@opentelemetry/semantic-conventions": "^1.41.1",
     "@prisma/client": "^6.0.0",
     "amqplib": "^0.10.4",
     "dotenv": "^16.4.5",
