@@ -3,6 +3,18 @@ import { PrismaClient, Prisma } from '@prisma/client'
 export class OutboxRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  async createEvent(eventType: string, aggregateType: string, aggregateId: number, payload: any, createdBy: string) {
+    return this.prisma.outboxEvent.create({
+      data: {
+        eventType,
+        aggregateType,
+        aggregateId,
+        payload: payload as any,
+        createdBy
+      }
+    })
+  }
+
   async fetchPending(limit: number = 50) {
     // Prisma does not have raw FOR UPDATE SKIP LOCKED without $queryRaw
     // We will use queryRaw for safe fetching

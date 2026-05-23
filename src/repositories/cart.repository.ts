@@ -29,6 +29,17 @@ export class CartRepository {
     })
   }
 
+  async updateCartStatus(cartId: number, status: string, actorEmail: string) {
+    return this.prisma.cart.update({
+      where: { id: cartId },
+      data: {
+        status,
+        updatedBy: actorEmail,
+        updatedAt: new Date(),
+      },
+    })
+  }
+
   async clearCart(cartId: number, deletedBy: string, cartItems: any[]) {
     const now = new Date()
     return this.prisma.$transaction(async (tx) => {

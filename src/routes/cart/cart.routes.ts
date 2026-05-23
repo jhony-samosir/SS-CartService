@@ -1,6 +1,8 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { CartService } from '../../services/cart.service'
 import { CartRepository } from '../../repositories/cart.repository'
+import { OutboxRepository } from '../../repositories/outbox.repository'
+import { CatalogClient } from '../../services/catalog-client'
 import {
   AddCartItemSchema,
   UpdateCartItemSchema,
@@ -12,7 +14,9 @@ import {
 
 export default async function cartRoutes(app: FastifyInstance) {
   const repo = new CartRepository(app.prisma)
-  const service = new CartService(repo)
+  const outboxRepo = new OutboxRepository(app.prisma)
+  const catalogClient = new CatalogClient()
+  const service = new CartService(repo, outboxRepo, catalogClient)
 
   // ─── GET /cart ────────────────────────────────────────────────────────────
   app.get(
@@ -109,6 +113,28 @@ export default async function cartRoutes(app: FastifyInstance) {
       if (result.notFound) return reply.code(404).send({ error: 'No active cart found' })
 
       return reply.code(204).send()
+    }
+  )
+  // ─── POST /cart/checkout ──────────────────────────────────────────────────
+  app.post(
+    '/checkout',
+    { preHandler: [app.authenticate] },
+    async (req: FastifyRequest, reply: FastifyReply) => {
+      const userId = req.user.userId
+      const actorEmail = req.user.email
+      const result = await service.checkout(userId, actorEmail)
+
+      if (result.notFound) return reply.code(404).send({ error: 'No active cart found' })
+      if (result.empty) return reply.code(400).send({ error: 'Cart is empty' })
+      if (result.outOfStock) {
+        return reply.code(409).send({ 
+          error: 'Insufficient stock', 
+          productName: result.productName,
+          availableStock: result.availableStock 
+        })
+      }
+
+      return reply.code(200).send({ data: result })
     }
   )
 }

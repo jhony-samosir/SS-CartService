@@ -1,8 +1,15 @@
 import { CartRepository } from '../repositories/cart.repository'
+import { OutboxRepository } from '../repositories/outbox.repository'
+import { CatalogClient } from './catalog-client'
 import { AddCartItemInput, UpdateCartItemInput } from '../schemas/cart.schema'
+import crypto from 'crypto'
 
 export class CartService {
-  constructor(private readonly repo: CartRepository) {}
+  constructor(
+    private readonly repo: CartRepository,
+    private readonly outboxRepo: OutboxRepository,
+    private readonly catalogClient: CatalogClient
+  ) {}
 
   async getCart(userId: number) {
     const cart = await this.repo.findActiveCartByUserId(userId)
@@ -48,10 +55,34 @@ export class CartService {
   }
 
   async addItem(userId: number, input: AddCartItemInput, actorEmail: string) {
+    // 1. Validate Product Existence & Price from Catalog Service
+    const product = await this.catalogClient.getProduct(input.productPublicId)
+    if (!product || product.status !== 'ACTIVE') {
+      return { validationError: 'Product is not available or inactive' }
+    }
+
+    // Override input price and name with authoritative data from Catalog
+    input.unitPrice = product.price
+    input.productName = product.name
+
+    // 2. Validate Inventory
+    const availableStock = await this.catalogClient.getInventory(input.variantId)
+    if (input.quantity > availableStock) {
+      return { outOfStock: true, availableStock }
+    }
+
     let cart = await this.repo.findActiveCartByUserId(userId)
     if (!cart) {
       cart = await this.repo.createCart(userId, actorEmail)
     }
+
+    // Check existing item quantity in cart to ensure total doesn't exceed stock
+    const existingItem = cart.items.find(i => i.productPublicId === input.productPublicId && i.variantId === input.variantId)
+    const newTotalQuantity = existingItem ? existingItem.quantity + input.quantity : input.quantity
+    if (newTotalQuantity > availableStock) {
+       return { outOfStock: true, availableStock }
+    }
+
     const item = await this.repo.addItem(cart.id, input, actorEmail)
     return { item }
   }
@@ -94,5 +125,65 @@ export class CartService {
     }
     await this.repo.clearCart(cart.id, actorEmail, cart.items)
     return { success: true }
+  }
+
+  async checkout(userId: number, actorEmail: string) {
+    const cart = await this.repo.findActiveCartByUserId(userId)
+    if (!cart) {
+      return { notFound: true }
+    }
+    if (cart.items.length === 0) {
+      return { empty: true }
+    }
+
+    // Re-validate stock for all items
+    for (const item of cart.items) {
+      const stock = await this.catalogClient.getInventory(item.variantId || undefined)
+      if (item.quantity > stock) {
+        return { 
+          outOfStock: true, 
+          productName: item.productName,
+          availableStock: stock
+        }
+      }
+    }
+
+    // Calculate totals
+    const totalAmount = cart.items.reduce((sum, i) => sum + (Number(i.unitPrice) * i.quantity), 0)
+    const currencyCode = cart.items[0]?.currencyCode || 'IDR'
+    const orderId = crypto.randomUUID()
+
+    const payload = {
+      correlationId: orderId,
+      userId,
+      cartPublicId: cart.publicId,
+      items: cart.items.map(i => ({
+        productPublicId: i.productPublicId,
+        variantId: i.variantId,
+        productName: i.productName,
+        quantity: i.quantity,
+        unitPrice: Number(i.unitPrice),
+        subtotal: Number(i.unitPrice) * i.quantity
+      })),
+      totalAmount,
+      currencyCode
+    }
+
+    // In a real app we'd use a single Prisma transaction across CartRepo and OutboxRepo.
+    // For simplicity, we just mark it checkout and insert outbox event.
+    await this.repo.updateCartStatus(cart.id, 'CHECKED_OUT', actorEmail)
+    await this.outboxRepo.createEvent(
+      'order.checkout.initiated',
+      'cart',
+      cart.id,
+      payload,
+      actorEmail
+    )
+
+    return { 
+      success: true, 
+      orderId,
+      totalAmount
+    }
   }
 }
