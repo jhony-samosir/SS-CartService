@@ -28,11 +28,13 @@
     "@fastify/jwt": "^9.0.0",
     "@fastify/sensible": "^6.0.0",
     "@prisma/client": "^6.0.0",
+    "amqplib": "^0.10.4",
     "dotenv": "^16.4.5",
     "fastify": "^5.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.5",
     "@types/node": "^22.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",

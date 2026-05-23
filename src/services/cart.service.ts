@@ -92,7 +92,7 @@ export class CartService {
     if (!cart) {
       return { notFound: true }
     }
-    await this.repo.clearCart(cart.id, actorEmail)
+    await this.repo.clearCart(cart.id, actorEmail, cart.items)
     return { success: true }
   }
 }

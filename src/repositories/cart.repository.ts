@@ -29,15 +29,35 @@ export class CartRepository {
     })
   }
 
-  async clearCart(cartId: number, deletedBy: string) {
+  async clearCart(cartId: number, deletedBy: string, cartItems: any[]) {
     const now = new Date()
-    await this.prisma.cartItem.updateMany({
-      where: { cartId, deletedAt: null },
-      data: { deletedAt: now, deletedBy },
-    })
-    return this.prisma.cart.update({
-      where: { id: cartId },
-      data: { deletedAt: now, deletedBy },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.cartItem.updateMany({
+        where: { cartId, deletedAt: null },
+        data: { deletedAt: now, deletedBy },
+      })
+      const cart = await tx.cart.update({
+        where: { id: cartId },
+        data: { deletedAt: now, deletedBy },
+      })
+
+      // Insert outbox event
+      const payload = {
+        cart_id: cartId,
+        items: cartItems.map(i => ({ product_id: i.productId, quantity: i.quantity }))
+      }
+
+      await tx.outboxEvent.create({
+        data: {
+          eventType: 'cart.checked_out',
+          aggregateType: 'cart',
+          aggregateId: cartId,
+          payload,
+          createdBy: deletedBy,
+        }
+      })
+
+      return cart
     })
   }
 

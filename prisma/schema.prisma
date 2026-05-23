@@ -23,7 +23,7 @@ model Cart {
   notes     String?  @db.Text
 
   items     CartItem[]
-  events    CartEvent[]
+  outboxEvents OutboxEvent[]
 
   @@map("carts")
 }
@@ -62,7 +62,7 @@ model CartItem {
   @@map("cart_items")
 }
 
-model CartEvent {
+model OutboxEvent {
   id        Int       @id @default(autoincrement())
   publicId  String    @unique @default(dbgenerated("gen_random_uuid()")) @map("public_id") @db.Uuid
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -83,5 +83,16 @@ model CartEvent {
 
   cart Cart @relation(fields: [aggregateId], references: [id])
 
-  @@map("cart_events")
+  @@map("outbox_events")
+}
+
+model InboxEvent {
+  messageId     String    @id @map("message_id") @db.VarChar(255)
+  eventType     String    @map("event_type") @db.VarChar(255)
+  aggregateType String?   @map("aggregate_type") @db.VarChar(100)
+  payload       Json
+  status        String    @default("processed") @db.VarChar(50)
+  processedAt   DateTime  @default(now()) @map("processed_at") @db.Timestamptz(6)
+
+  @@map("inbox_events")
 }

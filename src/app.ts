@@ -4,6 +4,11 @@ import jwtPlugin from './plugins/jwt'
 import loggerPlugin from './plugins/logger'
 import cartRoutes from './routes/cart/cart.routes'
 import { config } from './config'
+import rabbitmqPlugin from './plugins/rabbitmq'
+import { OutboxWorker } from './workers/outbox.worker'
+import { InboxConsumer } from './workers/inbox.consumer'
+import { OutboxRepository } from './repositories/outbox.repository'
+import { InboxRepository } from './repositories/inbox.repository'
 
 function buildLoggerConfig() {
   const isProd = config.app.env === 'production'
@@ -41,6 +46,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(prismaPlugin)
   await app.register(jwtPlugin)
   await app.register(loggerPlugin) // structured logging + correlationId
+  await app.register(rabbitmqPlugin)
 
   // ─── Health Check ────────────────────────────────────────────────────────
   app.get('/health', async (_req, reply) => {
@@ -53,6 +59,22 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   // ─── Routes ──────────────────────────────────────────────────────────────
   await app.register(cartRoutes, { prefix: '/cart' })
+
+  // ─── Workers ─────────────────────────────────────────────────────────────
+  app.addHook('onReady', async () => {
+    const outboxRepo = new OutboxRepository(app.prisma)
+    const inboxRepo = new InboxRepository(app.prisma)
+
+    const outboxWorker = new OutboxWorker(app, outboxRepo)
+    const inboxConsumer = new InboxConsumer(app, inboxRepo)
+
+    outboxWorker.start()
+    await inboxConsumer.start()
+
+    app.addHook('onClose', async () => {
+      outboxWorker.stop()
+    })
+  })
 
   return app
 }
