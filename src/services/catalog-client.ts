@@ -50,8 +50,6 @@ export class CatalogClient {
 
   async getInventory(variantId?: number): Promise<number> {
     try {
-      // In a real system, you'd pass product_id or variant_id.
-      // Assuming variant_id is optional and can be used to filter.
       const query = variantId ? `?variant_id=${variantId}` : ''
       
       const headers: Record<string, string> = {
@@ -66,11 +64,16 @@ export class CatalogClient {
         return 0
       }
       
-      const res = (await response.json()) as InventoryResponse
-      if (!res.data || res.data.length === 0) return 0
+      const rawRes = (await response.json()) as any
+      const items = rawRes?.data?.items
+      if (!items || !Array.isArray(items) || items.length === 0) return 0
       
-      // Sum available stock across all warehouses (quantity - reserved_quantity)
-      return res.data.reduce((sum, item) => sum + Math.max(0, item.quantity - item.reserved_quantity), 0)
+      // Sum available stock across all warehouses (quantity_on_hand - quantity_reserved)
+      return items.reduce((sum: number, item: any) => {
+        const qty = item.quantity_on_hand ?? item.quantity ?? 0
+        const reserved = item.quantity_reserved ?? item.reserved_quantity ?? 0
+        return sum + Math.max(0, qty - reserved)
+      }, 0)
     } catch (error) {
       console.error('CatalogClient getInventory error:', error)
       return 0

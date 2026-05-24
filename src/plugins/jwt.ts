@@ -38,6 +38,9 @@ export default fp(async (app: FastifyInstance) => {
   app.decorate('authenticate', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
       await req.jwtVerify()
+      if (req.user && req.user.sub) {
+        req.user.userId = parseInt(req.user.sub, 10)
+      }
     } catch (err) {
       reply.code(401).send({ error: 'Unauthorized', message: 'Invalid or missing token' })
     }

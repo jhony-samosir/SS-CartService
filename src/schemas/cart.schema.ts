@@ -9,7 +9,7 @@ export const AddCartItemSchema = z.object({
   productName: z.string().min(1).max(500),
   variantName: z.string().max(255).optional(),
   sku: z.string().max(255).optional(),
-  imageUrl: z.string().url().or(z.literal('')).optional(),
+  imageUrl: z.string().optional(),
   unitPrice: z.number().nonnegative(),
   currencyCode: z.string().length(3).default('IDR'),
   quantity: z.number().int().min(1).default(1),
