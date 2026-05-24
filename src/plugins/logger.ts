@@ -1,5 +1,6 @@
 import fp from 'fastify-plugin'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import { trace } from '@opentelemetry/api'
 
 export default fp(async (app: FastifyInstance) => {
   // Attach correlationId from API Gateway header to every request
@@ -8,8 +9,15 @@ export default fp(async (app: FastifyInstance) => {
       (req.headers['x-correlation-id'] as string) ??
       `cart-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
 
+    const activeSpan = trace.getActiveSpan()
+    const spanContext = activeSpan?.spanContext()
+    const traceId = spanContext?.traceId ?? ''
+    const spanId = spanContext?.spanId ?? ''
+
     req.log = req.log.child({
       correlationId,
+      traceId,
+      spanId,
       service: 'ss-cart-service',
     })
   })

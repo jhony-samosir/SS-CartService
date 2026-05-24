@@ -29,4 +29,4 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 EXPOSE 8083
 
-CMD ["node", "dist/server.js"]
+CMD ["node", "--require", "./dist/tracing.js", "dist/server.js"]

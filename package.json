@@ -25,6 +25,7 @@
   "author": "jhony-samosir",
   "license": "UNLICENSED",
   "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
     "@fastify/jwt": "^9.0.0",
     "@fastify/sensible": "^6.0.0",
     "@opentelemetry/auto-instrumentations-node": "^0.76.0",

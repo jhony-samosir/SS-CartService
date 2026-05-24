@@ -1,3 +1,5 @@
+import { context, propagation } from '@opentelemetry/api'
+
 export interface CatalogProductResponse {
   id: string
   name: string
@@ -29,7 +31,12 @@ export class CatalogClient {
 
   async getProduct(publicId: string): Promise<CatalogProductResponse | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/catalog/v1/products/${publicId}`)
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      propagation.inject(context.active(), headers)
+
+      const response = await fetch(`${this.baseUrl}/api/catalog/v1/products/${publicId}`, { headers })
       if (!response.ok) {
         if (response.status === 404) return null
         throw new Error(`Failed to fetch product: ${response.statusText}`)
@@ -46,7 +53,13 @@ export class CatalogClient {
       // In a real system, you'd pass product_id or variant_id.
       // Assuming variant_id is optional and can be used to filter.
       const query = variantId ? `?variant_id=${variantId}` : ''
-      const response = await fetch(`${this.baseUrl}/api/catalog/v1/inventory${query}`)
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      propagation.inject(context.active(), headers)
+
+      const response = await fetch(`${this.baseUrl}/api/catalog/v1/inventory${query}`, { headers })
       
       if (!response.ok) {
         console.error(`Failed to fetch inventory: ${response.statusText}`)
