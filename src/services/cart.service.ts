@@ -79,7 +79,7 @@ export class CartService {
     }
 
     // Check existing item quantity in cart to ensure total doesn't exceed stock
-    const existingItem = cart.items.find(i => i.productPublicId === input.productPublicId && i.variantId === input.variantId)
+    const existingItem = cart.items.find(i => i.productPublicId === input.productPublicId && (i.variantId ?? undefined) === (input.variantId ?? undefined))
     const newTotalQuantity = existingItem ? existingItem.quantity + input.quantity : input.quantity
     if (newTotalQuantity > availableStock) {
        return { outOfStock: true, availableStock }
@@ -173,7 +173,7 @@ export class CartService {
 
     // In a real app we'd use a single Prisma transaction across CartRepo and OutboxRepo.
     // For simplicity, we just mark it checkout and insert outbox event.
-    await this.repo.updateCartStatus(cart.id, 'CHECKED_OUT', actorEmail)
+    await this.repo.updateCartStatus(cart.id, 'checked_out', actorEmail)
     await this.outboxRepo.createEvent(
       'order.checkout.initiated',
       'cart',

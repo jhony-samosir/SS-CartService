@@ -79,7 +79,7 @@ export class CartRepository {
     const existing = await this.prisma.cartItem.findFirst({
       where: {
         cartId,
-        productId: input.productId,
+        productPublicId: input.productPublicId,
         variantId: input.variantId ?? null,
         deletedAt: null,
       },
