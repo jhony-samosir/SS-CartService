@@ -129,8 +129,9 @@ export default async function cartRoutes(app: FastifyInstance) {
     { preHandler: [app.authenticate] },
     async (req: FastifyRequest, reply: FastifyReply) => {
       const userId = req.user.userId
+      const userPublicId = (req.user as any).public_id
       const actorEmail = req.user.email
-      const result = await service.checkout(userId, actorEmail)
+      const result = await service.checkout(userId, userPublicId, actorEmail)
 
       if (result.notFound) return reply.code(404).send({ error: 'No active cart found' })
       if (result.empty) return reply.code(400).send({ error: 'Cart is empty' })

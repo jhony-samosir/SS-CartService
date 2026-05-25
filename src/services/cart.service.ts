@@ -129,7 +129,7 @@ export class CartService {
     return { success: true }
   }
 
-  async checkout(userId: number, actorEmail: string) {
+  async checkout(userId: number, userPublicId: string, actorEmail: string) {
     const cart = await this.repo.findActiveCartByUserId(userId)
     if (!cart) {
       return { notFound: true }
@@ -158,6 +158,7 @@ export class CartService {
     const payload = {
       correlationId: orderId,
       userId,
+      userPublicId,
       cartPublicId: cart.publicId,
       items: cart.items.map(i => ({
         productPublicId: i.productPublicId,
